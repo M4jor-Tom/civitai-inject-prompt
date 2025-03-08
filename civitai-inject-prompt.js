@@ -66,6 +66,61 @@ javascript:(function(){
             console.error("Could not change value of element of selector", selector);
         }
     }
+    function extractPrompt() {
+        const civitaiSelectors = {
+            positivePromptArea: "#input_prompt",
+            negativePromptArea: "#input_negativePrompt",
+            cfgScaleHiddenInput: "#mantine-rf-panel-advanced > div > div > div > div.relative.flex.flex-col.gap-3 > div:nth-child(1) > div > div.mantine-Slider-root.flex-1.mantine-15k342w > input[type=hidden]",
+            samplerHiddenInput: "#mantine-rf-panel-advanced > div > div > div > div.relative.flex.flex-col.gap-3 > div.mantine-InputWrapper-root.mantine-Select-root.mantine-1m3pqry > div > input[type=hidden]",
+            stepsHiddenInput: "#mantine-rf-panel-advanced > div > div > div > div.relative.flex.flex-col.gap-3 > div:nth-child(3) > div > div.mantine-Slider-root.flex-1.mantine-15k342w > input[type=hidden]"
+        };
+        return {
+            positivePrompt: document.querySelector(civitaiSelectors.positivePromptArea).value ?? null,
+            negativePrompt: document.querySelector(civitaiSelectors.negativePromptArea).value ?? null,
+            cfgScale: document.querySelector(civitaiSelectors.cfgScaleHiddenInput).value ?? null,
+            sampler: document.querySelector(civitaiSelectors.samplerHiddenInput).value ?? null,
+            steps: document.querySelector(civitaiSelectors.stepsHiddenInput).value ?? null
+        };
+    }
+    function generatePromptXML(data) {
+        const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<civitai-ai-prompt>
+    <prompt-details>
+        <positive-prompt>${data.positivePrompt || ''}</positive-prompt>
+        <negative-prompt>${data.negativePrompt || ''}</negative-prompt>
+    </prompt-details>
+    <image-parameters>
+        <width>512</width>
+        <height>512</height>
+        <steps>${data.steps || 0}</steps>
+        <sampler>${data.sampler || ''}</sampler>
+        <cfg-scale>${data.cfgScale || 0}</cfg-scale>
+        <seed></seed>
+        <clip-skip></clip-skip>
+    </image-parameters>
+    <resources>
+        <base-model>
+            <hash></hash>
+            <id></id>
+            <version></version>
+            <display-name></display-name>
+            <page-url></page-url>
+        </base-model>
+    </resources>
+</civitai-ai-prompt>`;
+        return xml;
+    }
+    function downloadXML(data, filename) {
+        const blob = new Blob([data], { type: 'application/xml' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
     function injectPrompt(response) {
         const civitaiSelectors = {
             positivePromptArea: "#input_prompt",
@@ -115,6 +170,9 @@ javascript:(function(){
             sub.style.gap = '.5vh';
             bar.appendChild(sub);
         })
+        bar.appendChild(buildButton("extract as xml", function() {
+            downloadXML(generatePromptXML(extractPrompt()))
+        }));
         bar.style.position = "fixed";
         bar.style.fontSize = "1rem";
         bar.style.bottom = '3vh';
